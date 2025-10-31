@@ -1,28 +1,59 @@
+// src/hooks/useReviews.js
 import { useState, useEffect, useCallback } from 'react';
 import reviewService from '../services/reviewService';
+
+// In-memory cache untuk respons API ulasan
+const reviewCache = new Map();
+// Batas waktu cache: 3 menit (180.000 milidetik)
+const CACHE_LIFETIME = 3 * 60 * 1000;
 
 /**
  * Custom hook for fetching reviews
  * @param {string} recipeId - Recipe ID
- * @returns {Object} - { reviews, loading, error, refetch }
+ * @returns {Object} - { reviews, loading, error, refetch, bustCache }
  */
 export function useReviews(recipeId) {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Cache key adalah recipeId
+  const cacheKey = `reviews_${recipeId}`;
 
   const fetchReviews = useCallback(async () => {
-    if (!recipeId) {
+    if (!recipeId) { // Ganti cek ke recipeId
       setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
       setError(null);
-      const response = await reviewService.getReviews(recipeId);
+      
+      // 1. Cek Cache
+      const cached = reviewCache.get(cacheKey);
+      const now = Date.now();
+      
+      if (cached && (now - cached.timestamp < CACHE_LIFETIME)) {
+        // Cache Hit & Belum Kedaluwarsa
+        // console.log(`[CACHE HIT] reviews: ${cacheKey}`);
+        setReviews(cached.data || []);
+        setLoading(false);
+        return;
+      }
+      
+      setLoading(true);
+
+      // 2. Fetch dari API (Cache Miss/Expired)
+      // console.log(`[CACHE MISS] reviews: ${cacheKey}. Fetching...`);
+      const response = await reviewService.getReviews(recipeId); // Ganti ke recipeId
       
       if (response.success) {
+        // 3. Update Cache
+        reviewCache.set(cacheKey, {
+          data: response.data,
+          timestamp: Date.now(),
+        });
+        
         setReviews(response.data || []);
       } else {
         setError(response.message || 'Failed to fetch reviews');
@@ -33,7 +64,7 @@ export function useReviews(recipeId) {
     } finally {
       setLoading(false);
     }
-  }, [recipeId]);
+  }, [recipeId, cacheKey]); // Tambahkan cacheKey
 
   useEffect(() => {
     fetchReviews();
@@ -44,12 +75,17 @@ export function useReviews(recipeId) {
     loading,
     error,
     refetch: fetchReviews,
+    // Fungsi untuk menghapus cache secara manual
+    bustCache: () => {
+      console.log(`[CACHE INVALIDATE] Menghapus cache: ${cacheKey}`);
+      reviewCache.delete(cacheKey);
+    },
   };
 }
 
 /**
  * Custom hook for creating a review
- * @returns {Object} - { createReview, loading, error, success }
+ * (Hook ini TIDAK perlu invalidasi, komponen yg akan panggil bustCache)
  */
 export function useCreateReview() {
   const [loading, setLoading] = useState(false);
@@ -66,7 +102,7 @@ export function useCreateReview() {
       
       if (response.success) {
         setSuccess(true);
-        return response;
+        return response; // Kembalikan respons jika sukses
       } else {
         setError(response.message || 'Failed to create review');
         return null;
@@ -79,10 +115,5 @@ export function useCreateReview() {
     }
   };
 
-  return {
-    createReview,
-    loading,
-    error,
-    success,
-  };
+  return { createReview, loading, error, success };
 }

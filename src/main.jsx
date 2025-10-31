@@ -1,6 +1,6 @@
 // src/main.jsx
-import { StrictMode, useState } from 'react'
-import { createRoot } from 'react-dom/client'
+import { StrictMode, useState, useEffect } from 'react';
+import { createRoot } from 'react-dom/client';
 import SplashScreen from './pages/SplashScreen';
 import HomePage from './pages/HomePage';
 import MakananPage from './pages/MakananPage';
@@ -11,7 +11,7 @@ import EditRecipePage from './pages/EditRecipePage';
 import RecipeDetail from './components/recipe/RecipeDetail';
 import DesktopNavbar from './components/navbar/DesktopNavbar';
 import MobileNavbar from './components/navbar/MobileNavbar';
-import './index.css'
+import './index.css';
 import PWABadge from './PWABadge';
 
 function AppRoot() {
@@ -26,6 +26,27 @@ function AppRoot() {
     setShowSplash(false);
   };
 
+  const handleRecipeClick = (recipeId, category) => {
+    setSelectedRecipeId(recipeId);
+    setSelectedCategory(category || currentPage);
+    setMode('detail');
+  };
+
+  // Untuk menangani deep link (URL yang di-share)
+  useEffect(() => {
+    if (!showSplash) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const recipeId = urlParams.get('recipe');
+      const category = urlParams.get('category');
+      
+      if (recipeId) {
+        handleRecipeClick(recipeId, category || 'makanan');
+        // Hapus query params dari URL setelah dibaca
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [showSplash]); // Dijalankan saat splash screen selesai
+
   const handleNavigation = (page) => {
     setCurrentPage(page);
     setMode('list');
@@ -37,17 +58,11 @@ function AppRoot() {
     setMode('create');
   };
 
-  const handleRecipeClick = (recipeId, category) => {
-    setSelectedRecipeId(recipeId);
-    setSelectedCategory(category || currentPage);
-    setMode('detail');
-  };
-
   const handleEditRecipe = (recipeId) => {
-    console.log('🔧 Edit button clicked! Recipe ID:', recipeId);
+    console.log('  Edit button clicked! Recipe ID:', recipeId);
     setEditingRecipeId(recipeId);
     setMode('edit');
-    console.log('✅ Mode changed to: edit');
+    console.log('  Mode changed to: edit');
   };
 
   const handleBack = () => {
@@ -107,15 +122,22 @@ function AppRoot() {
     // Show List Pages
     switch (currentPage) {
       case 'home':
-        return <HomePage onRecipeClick={handleRecipeClick} onNavigate={handleNavigation} />;
+        return <HomePage 
+                  onRecipeClick={handleRecipeClick} 
+                  onNavigate={handleNavigation} />;
       case 'makanan':
-        return <MakananPage onRecipeClick={handleRecipeClick} />;
+        return <MakananPage 
+                  onRecipeClick={(id) => handleRecipeClick(id, 'makanan')} />;
       case 'minuman':
-        return <MinumanPage onRecipeClick={handleRecipeClick} />;
+        return <MinumanPage 
+                  onRecipeClick={(id) => handleRecipeClick(id, 'minuman')} />;
       case 'profile':
-        return <ProfilePage onRecipeClick={handleRecipeClick} />;
+        return <ProfilePage 
+                  onRecipeClick={handleRecipeClick} />;
       default:
-        return <HomePage onRecipeClick={handleRecipeClick} onNavigate={handleNavigation} />;
+        return <HomePage 
+                  onRecipeClick={handleRecipeClick} 
+                  onNavigate={handleNavigation} />;
     }
   };
 
@@ -140,7 +162,7 @@ function AppRoot() {
           />
         </>
       )}
-      
+
       {/* Main Content */}
       <main className="min-h-screen">
         {renderCurrentPage()}
@@ -155,4 +177,4 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AppRoot />
   </StrictMode>,
-)
+);
