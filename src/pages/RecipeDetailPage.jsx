@@ -278,4 +278,3 @@ export default function RecipeDetailPage({ recipeId, onBack }) {
     </div>
   );
 }
-

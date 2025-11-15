@@ -133,7 +133,7 @@ export default function CreateRecipePage({ onBack, onSuccess }) {
       if (uploadResult.success) {
         setUploadedImageUrl(uploadResult.data.url);
         setCurrentStep('form');
-        alert('✅ Gambar berhasil diupload! Silakan isi form resep.');
+        alert(' ✅ Gambar berhasil diupload! Silakan isi form resep.');
       } else {
         throw new Error(uploadResult.error || 'Gagal upload gambar');
       }

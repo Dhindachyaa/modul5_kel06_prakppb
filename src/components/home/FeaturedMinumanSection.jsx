@@ -141,4 +141,3 @@ export default function FeaturedMinumanSection({ recipes, loading, error, onReci
     </section>
   );
 }
-

@@ -34,4 +34,3 @@ class FavoriteService {
 }
 
 export default new FavoriteService();
-

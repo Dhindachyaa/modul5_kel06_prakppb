@@ -68,6 +68,3 @@ export default function DesktopNavbar({ currentPage, onNavigate, onCreateRecipe 
     </nav>
   );
 }
-
-
-
