@@ -1,21 +1,21 @@
+// src/services/recipeService.js
 import { apiClient } from '../config/api';
+import { apiCache } from '../utils/apiCache'; // <-- IMPORT CACHE
 
 class RecipeService {
   /**
-   * Get all recipes with optional filters
-   * @param {Object} params - Query parameters
-   * @param {number} params.page - Page number (default: 1)
-   * @param {number} params.limit - Items per page (default: 10)
-   * @param {string} params.category - Filter by category: 'makanan' | 'minuman'
-   * @param {string} params.difficulty - Filter by difficulty: 'mudah' | 'sedang' | 'sulit'
-   * @param {string} params.search - Search in name/description
-   * @param {string} params.sort_by - Sort by field (default: 'created_at')
-   * @param {string} params.order - Sort order: 'asc' | 'desc' (default: 'desc')
-   * @returns {Promise}
+   * Get all recipes (dengan cache)
    */
   async getRecipes(params = {}) {
+    const cacheKey = `recipes_${JSON.stringify(params)}`;
+    const cachedData = apiCache.get(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
     try {
       const response = await apiClient.get('/api/v1/recipes', { params });
+      apiCache.set(cacheKey, response); // Simpan ke cache
       return response;
     } catch (error) {
       throw error;
@@ -23,13 +23,18 @@ class RecipeService {
   }
 
   /**
-   * Get recipe by ID
-   * @param {string} id - Recipe ID
-   * @returns {Promise}
+   * Get recipe by ID (dengan cache)
    */
   async getRecipeById(id) {
+    const cacheKey = `recipe_${id}`;
+    const cachedData = apiCache.get(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
     try {
       const response = await apiClient.get(`/api/v1/recipes/${id}`);
+      apiCache.set(cacheKey, response); // Simpan ke cache
       return response;
     } catch (error) {
       throw error;
@@ -37,13 +42,15 @@ class RecipeService {
   }
 
   /**
-   * Create new recipe
-   * @param {Object} recipeData - Recipe data
-   * @returns {Promise}
+   * Create new recipe (INVALIDASI CACHE)
    */
   async createRecipe(recipeData) {
     try {
       const response = await apiClient.post('/api/v1/recipes', recipeData);
+      
+      // Hapus cache daftar resep
+      apiCache.invalidatePrefix('recipes_');
+
       return response;
     } catch (error) {
       throw error;
@@ -51,14 +58,16 @@ class RecipeService {
   }
 
   /**
-   * Update existing recipe (full replacement)
-   * @param {string} id - Recipe ID
-   * @param {Object} recipeData - Complete recipe data (all fields required)
-   * @returns {Promise}
+   * Update existing recipe (INVALIDASI CACHE)
    */
   async updateRecipe(id, recipeData) {
     try {
       const response = await apiClient.put(`/api/v1/recipes/${id}`, recipeData);
+
+      // Hapus cache daftar resep DAN cache resep detail ini.
+      apiCache.invalidatePrefix('recipes_');
+      apiCache.invalidate(`recipe_${id}`);
+      
       return response;
     } catch (error) {
       throw error;
@@ -66,14 +75,15 @@ class RecipeService {
   }
 
   /**
-   * Partially update recipe (only send fields to update)
-   * @param {string} id - Recipe ID
-   * @param {Object} partialData - Partial recipe data (only fields to update)
-   * @returns {Promise}
+   * Partially update recipe (INVALIDASI CACHE)
    */
   async patchRecipe(id, partialData) {
     try {
       const response = await apiClient.patch(`/api/v1/recipes/${id}`, partialData);
+
+      apiCache.invalidatePrefix('recipes_');
+      apiCache.invalidate(`recipe_${id}`);
+
       return response;
     } catch (error) {
       throw error;
@@ -81,13 +91,16 @@ class RecipeService {
   }
 
   /**
-   * Delete recipe
-   * @param {string} id - Recipe ID
-   * @returns {Promise}
+   * Delete recipe (INVALIDASI CACHE)
    */
   async deleteRecipe(id) {
     try {
       const response = await apiClient.delete(`/api/v1/recipes/${id}`);
+
+      apiCache.invalidatePrefix('recipes_');
+      apiCache.invalidate(`recipe_${id}`);
+      apiCache.invalidatePrefix('favorites_'); // Hapus cache favorit juga
+
       return response;
     } catch (error) {
       throw error;

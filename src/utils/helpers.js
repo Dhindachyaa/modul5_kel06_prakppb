@@ -7,14 +7,12 @@
  */
 export function formatDate(dateString) {
   if (!dateString) return '';
-  
   const date = new Date(dateString);
   const options = {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   };
-  
   return date.toLocaleDateString('id-ID', options);
 }
 
@@ -25,7 +23,6 @@ export function formatDate(dateString) {
  */
 export function formatRelativeTime(dateString) {
   if (!dateString) return '';
-  
   const date = new Date(dateString);
   const now = new Date();
   const diffInSeconds = Math.floor((now - date) / 1000);
@@ -33,34 +30,20 @@ export function formatRelativeTime(dateString) {
   if (diffInSeconds < 60) {
     return 'Baru saja';
   }
-  
   const diffInMinutes = Math.floor(diffInSeconds / 60);
   if (diffInMinutes < 60) {
     return `${diffInMinutes} menit yang lalu`;
   }
-  
   const diffInHours = Math.floor(diffInMinutes / 60);
   if (diffInHours < 24) {
     return `${diffInHours} jam yang lalu`;
   }
-  
   const diffInDays = Math.floor(diffInHours / 24);
   if (diffInDays < 7) {
     return `${diffInDays} hari yang lalu`;
   }
-  
-  const diffInWeeks = Math.floor(diffInDays / 7);
-  if (diffInWeeks < 4) {
-    return `${diffInWeeks} minggu yang lalu`;
-  }
-  
-  const diffInMonths = Math.floor(diffInDays / 30);
-  if (diffInMonths < 12) {
-    return `${diffInMonths} bulan yang lalu`;
-  }
-  
-  const diffInYears = Math.floor(diffInDays / 365);
-  return `${diffInYears} tahun yang lalu`;
+  // Fallback jika lebih dari seminggu
+  return date.toLocaleDateString('id-ID');
 }
 
 /**
@@ -85,9 +68,9 @@ export function getDifficultyColor(difficulty) {
 export function getCategoryEmoji(category) {
   const emojis = {
     makanan: '🍲',
-    minuman: '🥤',
+    minuman: '🍹',
   };
-  return emojis[category?.toLowerCase()] || '🍽️';
+  return emojis[category?.toLowerCase()] || '🍴';
 }
 
 /**
@@ -106,12 +89,11 @@ export function isValidRating(rating) {
  */
 export function getStarRating(rating) {
   const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 >= 0.5;
-  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+  const hasHalfStar = rating % 1 >= 0.5; // Tidak dipakai di modul, tapi bagus untuk masa depan
+  const emptyStars = 5 - fullStars; // Modul Anda menggunakan Math.round, jadi kita ikuti itu
   
-  return '⭐'.repeat(fullStars) + 
-         (hasHalfStar ? '✨' : '') + 
-         '☆'.repeat(emptyStars);
+  const roundedRating = Math.round(rating);
+  return '★'.repeat(roundedRating) + '☆'.repeat(5 - roundedRating);
 }
 
 /**
@@ -142,4 +124,36 @@ export function debounce(func, wait = 300) {
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
   };
+}
+
+/**
+ * Copy text to clipboard
+ * @param {string} text - Text to copy
+ * @returns {Promise<boolean>} - True if successful
+ */
+export function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    // API modern yang aman
+    return navigator.clipboard.writeText(text)
+      .then(() => true)
+      .catch(() => false);
+  } else {
+    // Fallback untuk browser lama atau HTTP
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed"; 
+    textArea.style.left = "-999999px"; 
+    textArea.style.top = "-999999px"; 
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      return Promise.resolve(successful);
+    } catch (err) {
+      document.body.removeChild(textArea);
+      return Promise.resolve(false);
+    }
+  }
 }

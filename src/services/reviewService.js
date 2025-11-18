@@ -1,14 +1,21 @@
+// src/services/reviewService.js
 import { apiClient } from '../config/api';
+import { apiCache } from '../utils/apiCache'; // <-- IMPORT CACHE
 
 class ReviewService {
   /**
-   * Get all reviews for a recipe
-   * @param {string} recipeId - Recipe ID
-   * @returns {Promise}
+   * Get all reviews for a recipe (dengan cache)
    */
   async getReviews(recipeId) {
+    const cacheKey = `reviews_${recipeId}`;
+    const cachedData = apiCache.get(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
     try {
       const response = await apiClient.get(`/api/v1/recipes/${recipeId}/reviews`);
+      apiCache.set(cacheKey, response); // Simpan ke cache
       return response;
     } catch (error) {
       throw error;
@@ -16,17 +23,17 @@ class ReviewService {
   }
 
   /**
-   * Create review for a recipe
-   * @param {string} recipeId - Recipe ID
-   * @param {Object} reviewData - Review data
-   * @param {string} reviewData.user_identifier - User identifier
-   * @param {number} reviewData.rating - Rating (1-5)
-   * @param {string} reviewData.comment - Review comment (optional)
-   * @returns {Promise}
+   * Create review for a recipe (INVALIDASI CACHE)
    */
   async createReview(recipeId, reviewData) {
     try {
       const response = await apiClient.post(`/api/v1/recipes/${recipeId}/reviews`, reviewData);
+
+      // Hapus cache ulasan, resep detail, dan daftar resep (karena rating berubah)
+      apiCache.invalidate(`reviews_${recipeId}`);
+      apiCache.invalidate(`recipe_${recipeId}`);
+      apiCache.invalidatePrefix('recipes_');
+
       return response;
     } catch (error) {
       throw error;
@@ -34,16 +41,17 @@ class ReviewService {
   }
 
   /**
-   * Update existing review
-   * @param {string} reviewId - Review ID
-   * @param {Object} reviewData - Updated review data
-   * @param {number} reviewData.rating - Rating (1-5)
-   * @param {string} reviewData.comment - Review comment (optional)
-   * @returns {Promise}
+   * Update existing review (INVALIDASI CACHE)
    */
   async updateReview(reviewId, reviewData) {
     try {
       const response = await apiClient.put(`/api/v1/reviews/${reviewId}`, reviewData);
+      
+      // Hapus semua cache yg relevan
+      apiCache.invalidatePrefix('reviews_');
+      apiCache.invalidatePrefix('recipe_');
+      apiCache.invalidatePrefix('recipes_');
+
       return response;
     } catch (error) {
       throw error;
@@ -51,13 +59,17 @@ class ReviewService {
   }
 
   /**
-   * Delete review
-   * @param {string} reviewId - Review ID
-   * @returns {Promise}
+   * Delete review (INVALIDASI CACHE)
    */
   async deleteReview(reviewId) {
     try {
       const response = await apiClient.delete(`/api/v1/reviews/${reviewId}`);
+
+      // Hapus semua cache yg relevan
+      apiCache.invalidatePrefix('reviews_');
+      apiCache.invalidatePrefix('recipe_');
+      apiCache.invalidatePrefix('recipes_');
+
       return response;
     } catch (error) {
       throw error;

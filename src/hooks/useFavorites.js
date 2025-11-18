@@ -1,9 +1,10 @@
+// src/hooks/useFavorites.js
 import { useState, useEffect, useCallback } from 'react';
 import favoriteService from '../services/favoriteService';
 import userService from '../services/userService';
 
 /**
- * Get user identifier from localStorage or generate new one
+ * Get user identifier from localStorage
  */
 const getUserIdentifier = () => {
   return userService.getUserIdentifier();
@@ -11,7 +12,6 @@ const getUserIdentifier = () => {
 
 /**
  * Custom hook for fetching favorites
- * @returns {Object} - { favorites, loading, error, refetch }
  */
 export function useFavorites() {
   const [favorites, setFavorites] = useState([]);
@@ -23,6 +23,7 @@ export function useFavorites() {
     try {
       setLoading(true);
       setError(null);
+      
       const response = await favoriteService.getFavorites(userIdentifier);
       
       if (response.success) {
@@ -42,17 +43,11 @@ export function useFavorites() {
     fetchFavorites();
   }, [fetchFavorites]);
 
-  return {
-    favorites,
-    loading,
-    error,
-    refetch: fetchFavorites,
-  };
+  return { favorites, loading, error, refetch: fetchFavorites };
 }
 
 /**
  * Custom hook for toggling favorites
- * @returns {Object} - { toggleFavorite, loading, error }
  */
 export function useToggleFavorite() {
   const [loading, setLoading] = useState(false);
@@ -68,7 +63,7 @@ export function useToggleFavorite() {
         recipe_id: recipeId,
         user_identifier: userIdentifier,
       });
-      
+
       if (response.success) {
         return response.data;
       } else {
@@ -83,27 +78,22 @@ export function useToggleFavorite() {
     }
   };
 
-  return {
-    toggleFavorite,
-    loading,
-    error,
-  };
+  return { toggleFavorite, loading, error };
 }
 
 /**
  * Custom hook to check if a recipe is favorited
- * @param {string} recipeId - Recipe ID
- * @returns {Object} - { isFavorited, loading, toggleFavorite }
  */
 export function useIsFavorited(recipeId) {
   const { favorites, loading: fetchLoading, refetch } = useFavorites();
   const { toggleFavorite: toggle, loading: toggleLoading } = useToggleFavorite();
-  
+
   const isFavorited = favorites.some(fav => fav.id === recipeId);
 
   const toggleFavorite = async () => {
     const result = await toggle(recipeId);
     if (result) {
+      // Panggil refetch() untuk mendapatkan daftar favorit baru
       await refetch();
     }
     return result;

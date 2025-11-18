@@ -1,16 +1,15 @@
+// src/hooks/useReviews.js
 import { useState, useEffect, useCallback } from 'react';
 import reviewService from '../services/reviewService';
 
 /**
  * Custom hook for fetching reviews
- * @param {string} recipeId - Recipe ID
- * @returns {Object} - { reviews, loading, error, refetch }
  */
 export function useReviews(recipeId) {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  
   const fetchReviews = useCallback(async () => {
     if (!recipeId) {
       setLoading(false);
@@ -20,6 +19,7 @@ export function useReviews(recipeId) {
     try {
       setLoading(true);
       setError(null);
+      
       const response = await reviewService.getReviews(recipeId);
       
       if (response.success) {
@@ -44,12 +44,12 @@ export function useReviews(recipeId) {
     loading,
     error,
     refetch: fetchReviews,
+    // Kita tidak perlu 'bustCache' di sini lagi
   };
 }
 
 /**
  * Custom hook for creating a review
- * @returns {Object} - { createReview, loading, error, success }
  */
 export function useCreateReview() {
   const [loading, setLoading] = useState(false);
@@ -66,7 +66,7 @@ export function useCreateReview() {
       
       if (response.success) {
         setSuccess(true);
-        return response;
+        return response; // Kembalikan respons jika sukses
       } else {
         setError(response.message || 'Failed to create review');
         return null;
@@ -79,11 +79,5 @@ export function useCreateReview() {
     }
   };
 
-  return {
-    createReview,
-    loading,
-    error,
-    success,
-  };
+  return { createReview, loading, error, success };
 }
-
